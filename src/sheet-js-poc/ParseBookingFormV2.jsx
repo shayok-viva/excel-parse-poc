@@ -68,13 +68,39 @@ export default function ParseBookingFormV2() {
     const typeCells = ["J25", "K25", "L25", "M25"];
 
     // Build data rows based on number of selling unit entries
+    // const rows = unitCells.reduce((acc, addr, idx) => {
+    //   const unitVal = getCell(sheet, addr);
+    //   if (unitVal !== "") {
+    //     acc.push({
+    //       ...base,
+    //       "Selling Unit": unitVal,
+    //       Lot: getCell(sheet, typeCells[idx]),
+    //     });
+    //   }
+    //   return acc;
+    // }, []);
+
+    //if the bulk count 
+    let bulkCount = 0;
     const rows = unitCells.reduce((acc, addr, idx) => {
       const unitVal = getCell(sheet, addr);
+      const lotVal = getCell(sheet, typeCells[idx]);
+      let lotDisplay = "";
+
       if (unitVal !== "") {
+        if (lotVal === "A") {
+          lotDisplay = 1;
+        } else if (lotVal.toLowerCase() === "bulk") {
+          bulkCount += 1;
+          lotDisplay = bulkCount;
+        } else {
+          lotDisplay = lotVal;
+        }
+
         acc.push({
           ...base,
           "Selling Unit": unitVal,
-          Lot: getCell(sheet, typeCells[idx]),
+          Lot: lotDisplay,
         });
       }
       return acc;
