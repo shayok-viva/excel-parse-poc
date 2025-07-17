@@ -80,7 +80,7 @@ export default function ParseBookingFormV2() {
     //   return acc;
     // }, []);
 
-    //if the bulk count 
+    //if the bulk count is shown with numerical value.
     let bulkCount = 0;
     const rows = unitCells.reduce((acc, addr, idx) => {
       const unitVal = getCell(sheet, addr);
