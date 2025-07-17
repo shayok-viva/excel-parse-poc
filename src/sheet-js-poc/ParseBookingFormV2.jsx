@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import  { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 
 // React component to upload an Excel file and render specified fields
@@ -25,7 +25,7 @@ export default function ParseBookingFormV2() {
   // Format Excel serial date to readable string
   const formatDate = (serial) => {
     if (typeof serial === "number") {
-      return XLSX.SSF.format("dd-mmm-yyyy hh:MM", serial);
+      return XLSX.SSF.format("dd-mmm-yyyy", serial);
     }
     return serial || "";
   };
@@ -38,6 +38,7 @@ export default function ParseBookingFormV2() {
 
   // Handle file selection and parsing
   const handleUpload = async (e) => {
+    setExcelData([]);
     const file = e.target.files[0];
     if (!file) return;
     const data = await file.arrayBuffer();
@@ -52,7 +53,7 @@ export default function ParseBookingFormV2() {
     // Extract fixed fields
     const base = {
       Department: getCell(sheet, "R12"),
-      Supplier: getCell(sheet, "D26")||'',
+      Supplier: getCell(sheet, "D26") === 0 ? '' : getCell(sheet, "D26") ,
       "Factory Name": getCell(sheet, "D15"),
       Season: getCell(sheet, "R13"),
       Phase: getCell(sheet, "R14"),
@@ -112,9 +113,9 @@ export default function ParseBookingFormV2() {
   return (
     <div>
       <div style={{ textAlign: "center", margin: 20 }}>
-        <p>{excelData.length ? "Data loaded." : "Upload an Excel file"}</p>
+        <p>{excelData.length ? "Data loaded." : "Upload a booking form"}</p>
         <button onClick={() => fileInput.current.click()}>
-          {excelData.length ? "Load Another File" : "Select File"}
+          {excelData.length ? "Load Another Booking form" : "Select a booking form"}
         </button>
         <input
           type="file"
