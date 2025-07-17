@@ -1,4 +1,4 @@
-import  { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 
 // React component to upload an Excel file and render specified fields
@@ -47,13 +47,14 @@ export default function ParseBookingFormV2() {
       cellStyles: true,
       sheetStubs: true,
     });
-
     const sheet = wb.Sheets[wb.SheetNames[0]];
-
+    if (getCell(sheet, "A23") !== "Ref" || getCell(sheet, "D23") === "") {
+      window.alert("Booking ref not present");
+    }
     // Extract fixed fields
     const base = {
       Department: getCell(sheet, "R12"),
-      Supplier: getCell(sheet, "D26") === 0 ? '' : getCell(sheet, "D26") ,
+      Supplier: getCell(sheet, "D26") === 0 ? "" : getCell(sheet, "D26"),
       "Factory Name": getCell(sheet, "D15"),
       Season: getCell(sheet, "R13"),
       Phase: getCell(sheet, "R14"),
@@ -115,7 +116,9 @@ export default function ParseBookingFormV2() {
       <div style={{ textAlign: "center", margin: 20 }}>
         <p>{excelData.length ? "Data loaded." : "Upload a booking form"}</p>
         <button onClick={() => fileInput.current.click()}>
-          {excelData.length ? "Load Another Booking form" : "Select a booking form"}
+          {excelData.length
+            ? "Load Another Booking form"
+            : "Select a booking form"}
         </button>
         <input
           type="file"
@@ -134,7 +137,11 @@ export default function ParseBookingFormV2() {
                 {headers.map((h) => (
                   <th
                     key={h}
-                    style={{ border: "1px solid #000", padding: 8, backgroundColor: "#f0f0f0" }}
+                    style={{
+                      border: "1px solid #000",
+                      padding: 8,
+                      backgroundColor: "#f0f0f0",
+                    }}
                   >
                     {h}
                   </th>
@@ -145,8 +152,26 @@ export default function ParseBookingFormV2() {
               {excelData.map((row, i) => (
                 <tr key={i}>
                   {headers.map((h) => (
-                    <td key={h} style={{ border: "1px solid #000", padding: 8 }}>
-                      {row[h]}
+                    <td
+                      key={h}
+                      style={{
+                        border: "1px solid #000",
+                        padding: row[h] === "" ? 1 : 8,
+                        height: `${row[h] === "" ? "5px" : "100%"}`,
+                      }}
+                    >
+                      {row[h] === "" ? (
+                        <div
+                          style={{
+                            boxSizing: "border-box",
+                            width: "100%",
+                            height: "100%",
+                            border: "1px solid red",
+                          }}
+                        />
+                      ) : (
+                        row[h]
+                      )}
                     </td>
                   ))}
                 </tr>
