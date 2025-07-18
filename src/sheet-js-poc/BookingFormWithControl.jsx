@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 
 export default function BookingFormWithControl() {
@@ -109,8 +109,12 @@ export default function BookingFormWithControl() {
       );
       controlWorkerRef.current.onmessage = (evt) => {
         const { success, data: rows, error } = evt.data;
-        if (success) setControlRows(rows);
-        else alert("Control parse failed: " + error);
+        if (success) {
+          setControlRows(rows);
+          console.log({ rows });
+        } else {
+          alert("Control parse failed: " + error);
+        }
         setLoadingControl(false);
         controlWorkerRef.current.terminate();
         controlWorkerRef.current = null;
@@ -143,9 +147,16 @@ export default function BookingFormWithControl() {
       );
       return;
     }
-    const merged = bookingRows.flatMap((br) =>
-      controlRows.map((cr) => ({ ...br, ...cr }))
-    );
+    // instead of cross-join, append the first control row as columns
+    const controlData = controlRows[0] || {};
+    const merged = bookingRows.map((br) => ({
+      ...br,
+      "PO number": controlData["PO number"] || "",
+      "PO type": controlData["PO type"] || "",
+      "Ship mode": controlData["Ship mode"] || "",
+      "Original Planned PO delivery date":
+        controlData["Original Planned PO delivery date"] || "",
+    }));
     setMergedRows(merged);
   }, [bookingRows, controlRows]);
 
@@ -182,32 +193,36 @@ export default function BookingFormWithControl() {
         />
       </div>
 
-      {mergedRows.length > 0 && (
-        <div style={{ overflow: "auto", marginTop: 20 }}>
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead>
-              <tr>
-                {headers.map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      border: "1px solid #000",
-                      padding: 8,
-                      backgroundColor: "#f0f0f0",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+      <div style={{ overflow: "auto", marginTop: 20 }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              {headers.map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    border: "1px solid #000",
+                    padding: 8,
+                    backgroundColor: "#f0f0f0",
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {mergedRows.length > 0 ? (
             <tbody>
               {mergedRows.map((row, i) => (
                 <tr key={i}>
                   {headers.map((h) => (
                     <td
                       key={h}
-                      style={{ border: "1px solid #000", padding: 8 }}
+                      style={{
+                        width: "fit-content",
+                        border: "1px solid #000",
+                        padding: 8,
+                      }}
                     >
                       {row[h] || ""}
                     </td>
@@ -215,9 +230,26 @@ export default function BookingFormWithControl() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
-      )}
+          ) : (
+            <tbody>
+              <tr>
+                {headers.map((h) => (
+                  <td
+                    key={h}
+                    style={{
+                      height: "100px",
+                      border: "1px solid #000",
+                      padding: 8,
+                    }}
+                  >
+                    {""}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          )}
+        </table>
+      </div>
     </div>
   );
 }

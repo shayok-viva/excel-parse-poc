@@ -1,8 +1,8 @@
 import { useState } from "react";
 import "./App.css";
-import ExcelUploader from "./sheet-js-poc/ParseSheetV2";
-import ParseBookingForm from "./sheet-js-poc/ParseBookingForm";
-import ParseBookingFormV2 from "./sheet-js-poc/ParseBookingFormV2";
+// import ExcelUploader from "./sheet-js-poc/ParseSheetV2";
+// import ParseBookingForm from "./sheet-js-poc/ParseBookingForm";
+// import ParseBookingFormV2 from "./sheet-js-poc/ParseBookingFormV2";
 import BookingFormWithControl from "./sheet-js-poc/BookingFormWithControl";
 
 function App() {
@@ -12,8 +12,9 @@ function App() {
     <>
       {/* <ExcelUploader /> */}
       {/* <ParseBookingForm/> */}
-      <ParseBookingFormV2/>
-      <BookingFormWithControl/>
+      {/* <ParseBookingFormV2/> */}
+      <img src="/css-logo.png" />
+      <BookingFormWithControl />
     </>
   );
 }
