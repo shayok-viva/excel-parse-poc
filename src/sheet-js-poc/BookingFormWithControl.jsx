@@ -111,7 +111,6 @@ export default function BookingFormWithControl() {
         const { success, data: rows, error } = evt.data;
         if (success) {
           setControlRows(rows);
-          console.log({ rows });
         } else {
           alert("Control parse failed: " + error);
         }
@@ -147,15 +146,13 @@ export default function BookingFormWithControl() {
       );
       return;
     }
-    // instead of cross-join, append the first control row as columns
-    const controlData = controlRows[0] || {};
-    const merged = bookingRows.map((br) => ({
+    const merged = bookingRows.map((br, idx) => ({
       ...br,
-      "PO number": controlData["PO number"] || "",
-      "PO type": controlData["PO type"] || "",
-      "Ship mode": controlData["Ship mode"] || "",
+      "PO number": controlRows[idx].po_number || "",
+      "PO type": controlRows[idx].po_type || "",
+      "Ship mode": controlRows[idx].ship_mode || "",
       "Original Planned PO delivery date":
-        controlData["Original Planned PO delivery date"] || "",
+        controlRows[idx].original_planned_po_delivery_date || "",
     }));
     setMergedRows(merged);
   }, [bookingRows, controlRows]);
