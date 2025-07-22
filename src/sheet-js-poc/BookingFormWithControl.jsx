@@ -4,14 +4,12 @@ import * as XLSX from "xlsx";
 export default function BookingFormWithControl() {
   const [businessData, setBusinessData] = useState([]);
   const [loadingControl, setLoadingControl] = useState(false);
-  const [packSize, setPackSize] = useState("");
-  const [unitCost, setUnitCost] = useState("");
 
   const bookingInput = useRef();
   const controlInput = useRef();
   const controlWorkerRef = useRef(null);
 
-  // 1) Define columns with display header and snake_case accessor
+  // 1) Define columns, including two manual‐entry columns
   const columns = [
     { header: "Department", accessor: "department" },
     { header: "Supplier", accessor: "supplier" },
@@ -35,9 +33,13 @@ export default function BookingFormWithControl() {
       header: "Original Planned PO Delivery Date",
       accessor: "original_planned_po_delivery_date",
     },
+    // new manual columns
+    { header: "Pack Size", accessor: "pack_size" },
+    { header: "Unit Cost", accessor: "unit_cost" },
+    // computed columns
     { header: "Manufacturing Units", accessor: "manufacturing_units" },
     { header: "Total Value", accessor: "total_value" },
-    { header: "Total Value After 1%", accessor: "total_value_after_1pct" },
+    { header: "Total Value after 1%", accessor: "total_value_after_1pct" },
   ];
 
   const formatDate = (serial) =>
@@ -47,17 +49,13 @@ export default function BookingFormWithControl() {
 
   const getCell = (sheet, addr) => sheet[addr]?.v || "";
 
-  // 2) Booking form parser seeds businessData with snake_case keys
+  // 2) Parse Booking Form → seed businessData
   const handleBookingUpload = async (e) => {
-    setBusinessData([]);
-    setPackSize("");
-    setUnitCost("");
-
+    setBusinessData([]); // clear
     const file = e.target.files[0];
     if (!file) return;
 
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, {
+    const wb = XLSX.read(await file.arrayBuffer(), {
       type: "array",
       cellStyles: true,
       sheetStubs: true,
@@ -87,14 +85,17 @@ export default function BookingFormWithControl() {
     const lotCells = ["J25", "K25", "L25", "M25"];
     let bulkCount = 0;
 
+    // Each row carries pack_size/unit_cost initially empty
     const rows = unitCells.reduce((arr, addr, idx) => {
       const unit = getCell(sht, addr);
       const rawLot = getCell(sht, lotCells[idx]);
       if (unit !== "") {
-        let lot;
-        if (rawLot === "A") lot = 1;
-        else if (rawLot.toLowerCase() === "bulk") lot = ++bulkCount;
-        else lot = rawLot;
+        let lot =
+          rawLot === "A"
+            ? 1
+            : rawLot.toLowerCase() === "bulk"
+            ? ++bulkCount
+            : rawLot;
         arr.push({
           ...base,
           selling_unit: unit,
@@ -103,6 +104,11 @@ export default function BookingFormWithControl() {
           po_type: "",
           ship_mode: "",
           original_planned_po_delivery_date: "",
+          pack_size: "",
+          unit_cost: "",
+          manufacturing_units: "",
+          total_value: "",
+          total_value_after_1pct: "",
         });
       }
       return arr;
@@ -111,7 +117,7 @@ export default function BookingFormWithControl() {
     setBusinessData(rows);
   };
 
-  // 3) Control parser merges into same businessData
+  // 3) Parse Control Tower → merge PO columns
   const handleControlUpload = async (e) => {
     setLoadingControl(true);
     const file = e.target.files[0];
@@ -126,17 +132,17 @@ export default function BookingFormWithControl() {
         { type: "module" }
       );
       controlWorkerRef.current.onmessage = ({ data }) => {
-        const { success, data: controlRows, error } = data;
+        const { success, data: crs, error } = data;
         if (!success) {
           alert("Control parse failed: " + error);
           setLoadingControl(false);
           return;
         }
         setBusinessData((prev) =>
-          prev.map((r, i) => {
-            const cr = controlRows[i] || {};
+          prev.map((row, i) => {
+            const cr = crs[i] || {};
             return {
-              ...r,
+              ...row,
               po_number: cr["po_number"] || "",
               po_type: cr["po_type"] || "",
               ship_mode: cr["ship_mode"] || "",
@@ -150,7 +156,6 @@ export default function BookingFormWithControl() {
         controlWorkerRef.current = null;
       };
     }
-
     const buffer = await file.arrayBuffer();
     controlWorkerRef.current.postMessage({
       buffer,
@@ -158,34 +163,46 @@ export default function BookingFormWithControl() {
     });
   };
 
-  // 4) Reset and restart
+  // 4) Reset flow
   const resetAndUploadBooking = () => {
-    // clear businessData so inputs reappear fresh
     setBusinessData([]);
     setLoadingControl(false);
-    setPackSize("");
-    setUnitCost("");
-    // reset file input so onChange always fires
     bookingInput.current.value = "";
     controlInput.current.value = "";
     bookingInput.current.click();
   };
 
-  // 5) Compute final rows with manual inputs
-  const finalRows = useMemo(() => {
-    const ps = parseFloat(packSize) || 0;
-    const uc = parseFloat(unitCost) || 0;
-    return businessData.map((row) => ({
-      ...row,
-      manufacturing_units: row.selling_unit * ps,
-      total_value: (row.selling_unit * uc).toFixed(2),
-      total_value_after_1pct: (row.selling_unit * uc * 0.99).toFixed(2),
-    }));
-  }, [businessData, packSize, unitCost]);
+  // 5) Compute per-row derived fields
+  useEffect(() => {
+    setBusinessData((prev) =>
+      prev.map((row) => {
+        const ps = parseFloat(row.pack_size) || 0;
+        const uc = parseFloat(row.unit_cost) || 0;
+        const su = parseFloat(row.selling_unit) || 0;
+        const manu = su * ps;
+        const tot = su * uc;
+        const aft = tot * 0.99;
+        return {
+          ...row,
+          manufacturing_units: manu,
+          total_value: tot.toFixed(2),
+          total_value_after_1pct: aft.toFixed(2),
+        };
+      })
+    );
+  }, [
+    businessData.map((r) => r.pack_size).join(),
+    businessData.map((r) => r.unit_cost).join(),
+  ]);
 
+  // --- Render ---
+  // if no rows yet, show one empty row
+  const rowsToShow = businessData.length
+    ? businessData
+    : [columns.reduce((obj, c) => ({ ...obj, [c.accessor]: "" }), {})];
+  console.log({ businessData });
   return (
     <div>
-      {/* Upload Buttons */}
       <div style={{ textAlign: "center", margin: 20 }}>
         <button onClick={resetAndUploadBooking}>Upload Booking Form</button>
         <input
@@ -215,70 +232,54 @@ export default function BookingFormWithControl() {
         />
       </div>
 
-      {/* Manual inputs */}
-      {businessData.length > 0 && !loadingControl && (
-        <div style={{ textAlign: "center", margin: "1rem 0" }}>
-          <label style={{ marginRight: 12 }}>
-            Pack Size:&nbsp;
-            <input
-              type="number"
-              value={packSize}
-              onChange={(e) => setPackSize(e.target.value)}
-              style={{ width: 80 }}
-            />
-          </label>
-          <label>
-            Unit Cost:&nbsp;
-            <input
-              type="number"
-              value={unitCost}
-              onChange={(e) => setUnitCost(e.target.value)}
-              style={{ width: 80 }}
-            />
-          </label>
-        </div>
-      )}
-
-      {/* Final Table */}
       <div style={{ overflow: "auto", marginTop: 20 }}>
         <table style={{ borderCollapse: "collapse", width: "100%" }}>
           <thead>
             <tr>
-              {columns.map((col) => (
+              {columns.map((c) => (
                 <th
-                  key={col.accessor}
+                  key={c.accessor}
                   style={{
                     border: "1px solid #000",
                     padding: 8,
                     backgroundColor: "#f0f0f0",
                   }}
                 >
-                  {col.header}
+                  {c.header}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {finalRows
-              ? finalRows.map((row, i) => (
-                  <tr key={i}>
-                    {columns.map((col) => (
-                      <td
-                        key={col.accessor}
-                        style={{ border: "1px solid #000", padding: 8 }}
-                      >
-                        {row[col.accessor] ?? ""}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : columns.header.map((header,idx) => (
-                  <tr key={idx}>
-                    <td key={idx}>
-                      {""}
-                    </td>
-                  </tr>
+            {rowsToShow.map((row, ri) => (
+              <tr key={ri}>
+                {columns.map((c) => (
+                  <td
+                    key={c.accessor}
+                    style={{ border: "1px solid #000", padding: 8 }}
+                  >
+                    {c.accessor === "pack_size" ||
+                    c.accessor === "unit_cost" ? (
+                      <input
+                        type="number"
+                        value={row[c.accessor]}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setBusinessData((prev) => {
+                            const next = [...prev];
+                            next[ri] = { ...next[ri], [c.accessor]: v };
+                            return next;
+                          });
+                        }}
+                        style={{ width: 60 }}
+                      />
+                    ) : (
+                      row[c.accessor]
+                    )}
+                  </td>
                 ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
