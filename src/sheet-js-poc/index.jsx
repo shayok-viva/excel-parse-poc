@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { read, utils } from "xlsx";
 import { JSONTable } from "./Table";
-import JSONSheetRenderer from "./JSONSheetRender";
 
 const SheetJsParser = () => {
   const [data, setData] = useState();
