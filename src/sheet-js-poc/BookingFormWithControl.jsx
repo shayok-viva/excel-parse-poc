@@ -271,7 +271,7 @@ export default function BookingFormWithControl() {
                             return next;
                           });
                         }}
-                        style={{ width: 60 }}
+                        style={{ width: 60,background:"transparent", border:'0.5px solid gray' }}
                       />
                     ) : (
                       row[c.accessor]
