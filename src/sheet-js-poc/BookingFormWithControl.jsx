@@ -4,7 +4,8 @@ import * as XLSX from "xlsx";
 export default function BookingFormWithControl() {
   const [businessData, setBusinessData] = useState([]);
   const [loadingControl, setLoadingControl] = useState(false);
-
+  const bookingFileName = useRef("");
+  const controlTowerFileName = useRef("");
   const bookingInput = useRef();
   const controlInput = useRef();
   const controlWorkerRef = useRef(null);
@@ -52,6 +53,7 @@ export default function BookingFormWithControl() {
   // 2) Parse Booking Form → seed businessData
   const handleBookingUpload = async (e) => {
     setBusinessData([]); // clear
+    bookingFileName.current = "";
     const file = e.target.files[0];
     if (!file) return;
 
@@ -81,8 +83,8 @@ export default function BookingFormWithControl() {
       ship_date: formatDate(getCell(sht, "J21")),
     };
 
-    const unitCells = ["J24", "K24", "L24", "M24","N24","O24","P24","Q24"];
-    const lotCells = ["J25", "K25", "L25", "M25","N25","O25","P25","Q25"];
+    const unitCells = ["J24", "K24", "L24", "M24", "N24", "O24", "P24", "Q24"];
+    const lotCells = ["J25", "K25", "L25", "M25", "N25", "O25", "P25", "Q25"];
     let bulkCount = 0;
     // Each row carries pack_size/unit_cost initially empty
     const rows = unitCells.reduce((arr, addr, idx) => {
@@ -114,17 +116,24 @@ export default function BookingFormWithControl() {
     }, []);
 
     setBusinessData(rows);
+    bookingFileName.current = file.name;
   };
-
+  const truncateFilename = (filename, maxLength = 20) => {
+    if (!filename) return "";
+    if (filename.length <= maxLength) return filename;
+    const start = filename.slice(0, Math.floor(maxLength / 2) - 1);
+    const end = filename.slice(-Math.floor(maxLength / 2));
+    return `${start}...${end}`;
+  };
   // 3) Parse Control Tower → merge PO columns
   const handleControlUpload = async (e) => {
+    controlTowerFileName.current = "";
     setLoadingControl(true);
     const file = e.target.files[0];
     if (!file || !businessData.length) {
       setLoadingControl(false);
       return;
     }
-
     if (!controlWorkerRef.current) {
       controlWorkerRef.current = new Worker(
         new URL("../web-workers/controlWorker.js", import.meta.url),
@@ -145,8 +154,7 @@ export default function BookingFormWithControl() {
               po_number: cr["po_number"] || "",
               po_type: cr["po_type"] || "",
               ship_mode: cr["ship_mode"] || "",
-              po_delivery_date:
-                cr["po_delivery_date"] || "",
+              po_delivery_date: cr["po_delivery_date"] || "",
             };
           })
         );
@@ -160,6 +168,7 @@ export default function BookingFormWithControl() {
       buffer,
       bookingRef: businessData[0].reference_no,
     });
+    controlTowerFileName.current = file.name;
   };
 
   // 4) Reset flow
@@ -200,35 +209,47 @@ export default function BookingFormWithControl() {
     : [columns.reduce((obj, c) => ({ ...obj, [c.accessor]: "" }), {})];
   return (
     <div>
-      <div style={{ textAlign: "center", margin: 20 }}>
-        <button onClick={resetAndUploadBooking}>Upload Booking Form</button>
-        <input
-          ref={bookingInput}
-          type="file"
-          accept=".xlsx,.xls"
-          style={{ display: "none" }}
-          onChange={handleBookingUpload}
-        />
-
-        <button
-          onClick={() => controlInput.current.click()}
-          disabled={!businessData.length || loadingControl}
-          style={{ marginLeft: 10 }}
-        >
-          {loadingControl
-            ? "Parsing Control Tower..."
-            : "Upload Control Tower File"}
-        </button>
-        {loadingControl && <span style={{ marginLeft: 10 }}>⏳</span>}
-        <input
-          ref={controlInput}
-          type="file"
-          accept=".xlsx,.xls"
-          style={{ display: "none" }}
-          onChange={handleControlUpload}
-        />
+      <div
+        style={{
+          textAlign: "center",
+          margin: 20,
+          display: "flex",
+          gap: "4px",
+          justifyContent: "center",
+        }}
+      >
+        <div>
+          <button onClick={resetAndUploadBooking}>Upload Booking Form</button>
+          <input
+            ref={bookingInput}
+            type="file"
+            accept=".xlsx,.xls"
+            style={{ display: "none" }}
+            onChange={handleBookingUpload}
+          />
+          <p title={bookingFileName.current}>File Name: {truncateFilename(bookingFileName.current)}</p>
+        </div>
+        <div>
+          <button
+            onClick={() => controlInput.current.click()}
+            disabled={!businessData.length || loadingControl}
+            style={{ marginLeft: 10 }}
+          >
+            {loadingControl
+              ? "Parsing Control Tower..."
+              : "Upload Control Tower File"}
+          </button>
+          {loadingControl && <span style={{ marginLeft: 10 }}>⏳</span>}
+          <input
+            ref={controlInput}
+            type="file"
+            accept=".xlsx,.xls"
+            style={{ display: "none" }}
+            onChange={handleControlUpload}
+          />
+          <p title={controlTowerFileName.current}>File Name: {truncateFilename(controlTowerFileName.current)}</p>
+        </div>
       </div>
-
       <div style={{ overflow: "auto", marginTop: 20 }}>
         <table style={{ borderCollapse: "collapse", width: "100%" }}>
           <thead>
@@ -253,7 +274,12 @@ export default function BookingFormWithControl() {
                 {columns.map((c) => (
                   <td
                     key={c.accessor}
-                    style={{ border: "1px solid #000", padding: 8, height:"auto", minHeight:"80px" }}
+                    style={{
+                      border: "1px solid #000",
+                      padding: 8,
+                      height: "auto",
+                      minHeight: "80px",
+                    }}
                   >
                     {c.accessor === "pack_size" ||
                     c.accessor === "unit_cost" ? (
@@ -268,7 +294,12 @@ export default function BookingFormWithControl() {
                             return next;
                           });
                         }}
-                        style={{ width: 60,background:"transparent", border:'0.5px solid gray', color:'black' }}
+                        style={{
+                          width: 60,
+                          background: "transparent",
+                          border: "0.5px solid gray",
+                          color: "black",
+                        }}
                       />
                     ) : (
                       row[c.accessor]
