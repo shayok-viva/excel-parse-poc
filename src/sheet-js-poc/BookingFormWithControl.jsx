@@ -18,11 +18,11 @@ export default function BookingFormWithControl() {
     { header: "Phase", accessor: "phase" },
     { header: "Description", accessor: "description" },
     { header: "Color", accessor: "color" },
-    { header: "Booking Ref", accessor: "booking_ref" },
-    { header: "Booking Form Date", accessor: "booking_form_date" },
+    { header: "Booking Ref", accessor: "reference_no" },
+    { header: "Booking Form Date", accessor: "booking_date" },
     {
       header: "Ship Date From Booking Form",
-      accessor: "ship_date_from_booking_form",
+      accessor: "ship_date",
     },
     { header: "Selling Unit", accessor: "selling_unit" },
     { header: "Lot", accessor: "lot" },
@@ -31,7 +31,7 @@ export default function BookingFormWithControl() {
     { header: "Ship Mode", accessor: "ship_mode" },
     {
       header: "Original Planned PO Delivery Date",
-      accessor: "original_planned_po_delivery_date",
+      accessor: "po_delivery_date",
     },
     // new manual columns
     { header: "Pack Size", accessor: "pack_size" },
@@ -70,21 +70,20 @@ export default function BookingFormWithControl() {
 
     const base = {
       department: getCell(sht, "R12"),
-      supplier: getCell(sht, "D26") || "",
+      supplier: getCell(sht, "D14") || "",
       factory_name: getCell(sht, "D15"),
       season: getCell(sht, "R13"),
       phase: getCell(sht, "R14"),
       description: getCell(sht, "D21"),
       color: getCell(sht, "D27"),
-      booking_ref: bookingRef,
-      booking_form_date: formatDate(getCell(sht, "L14")),
-      ship_date_from_booking_form: formatDate(getCell(sht, "J21")),
+      reference_no: bookingRef,
+      booking_date: formatDate(getCell(sht, "L14")),
+      ship_date: formatDate(getCell(sht, "J21")),
     };
 
-    const unitCells = ["J24", "K24", "L24", "M24"];
-    const lotCells = ["J25", "K25", "L25", "M25"];
+    const unitCells = ["J24", "K24", "L24", "M24","N24","O24","P24","Q24"];
+    const lotCells = ["J25", "K25", "L25", "M25","N25","O25","P25","Q25"];
     let bulkCount = 0;
-
     // Each row carries pack_size/unit_cost initially empty
     const rows = unitCells.reduce((arr, addr, idx) => {
       const unit = getCell(sht, addr);
@@ -103,7 +102,7 @@ export default function BookingFormWithControl() {
           po_number: "",
           po_type: "",
           ship_mode: "",
-          original_planned_po_delivery_date: "",
+          po_delivery_date: "",
           pack_size: "",
           unit_cost: "",
           manufacturing_units: "",
@@ -146,8 +145,8 @@ export default function BookingFormWithControl() {
               po_number: cr["po_number"] || "",
               po_type: cr["po_type"] || "",
               ship_mode: cr["ship_mode"] || "",
-              original_planned_po_delivery_date:
-                cr["original_planned_po_delivery_date"] || "",
+              po_delivery_date:
+                cr["po_delivery_date"] || "",
             };
           })
         );
@@ -159,7 +158,7 @@ export default function BookingFormWithControl() {
     const buffer = await file.arrayBuffer();
     controlWorkerRef.current.postMessage({
       buffer,
-      bookingRef: businessData[0].booking_ref,
+      bookingRef: businessData[0].reference_no,
     });
   };
 
@@ -194,13 +193,11 @@ export default function BookingFormWithControl() {
     businessData.map((r) => r.pack_size).join(),
     businessData.map((r) => r.unit_cost).join(),
   ]);
-
   // --- Render ---
   // if no rows yet, show one empty row
   const rowsToShow = businessData.length
     ? businessData
     : [columns.reduce((obj, c) => ({ ...obj, [c.accessor]: "" }), {})];
-  console.log({ businessData });
   return (
     <div>
       <div style={{ textAlign: "center", margin: 20 }}>
@@ -256,7 +253,7 @@ export default function BookingFormWithControl() {
                 {columns.map((c) => (
                   <td
                     key={c.accessor}
-                    style={{ border: "1px solid #000", padding: 8 }}
+                    style={{ border: "1px solid #000", padding: 8, height:"auto", minHeight:"80px" }}
                   >
                     {c.accessor === "pack_size" ||
                     c.accessor === "unit_cost" ? (

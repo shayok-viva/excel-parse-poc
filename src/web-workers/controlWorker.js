@@ -52,7 +52,7 @@ self.onmessage = async (e) => {
           'po_number': getValAt(idxA),
           'po_type': getValAt(idxAC),
           'ship_mode': getValAt(idxAR),
-          'original_planned_po_delivery_date': typeof getValAt(idxAW) === 'number'
+          'po_delivery_date': typeof getValAt(idxAW) === 'number'
             ? XLSX.SSF.format('dd-mmm-yyyy', getValAt(idxAW))
             : getValAt(idxAW)
         });
