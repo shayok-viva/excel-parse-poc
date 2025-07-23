@@ -227,7 +227,11 @@ export default function BookingFormWithControl() {
             style={{ display: "none" }}
             onChange={handleBookingUpload}
           />
-          <p title={bookingFileName.current}>File Name: {truncateFilename(bookingFileName.current)}</p>
+          {bookingFileName.current.length > 0 && (
+            <p title={bookingFileName.current}>
+              File Name: {truncateFilename(bookingFileName.current)}
+            </p>
+          )}
         </div>
         <div>
           <button
@@ -247,7 +251,11 @@ export default function BookingFormWithControl() {
             style={{ display: "none" }}
             onChange={handleControlUpload}
           />
-          <p title={controlTowerFileName.current}>File Name: {truncateFilename(controlTowerFileName.current)}</p>
+          {controlTowerFileName.current.length > 0 && (
+            <p title={controlTowerFileName.current}>
+              File Name: {truncateFilename(controlTowerFileName.current)}
+            </p>
+          )}
         </div>
       </div>
       <div style={{ overflow: "auto", marginTop: 20 }}>
